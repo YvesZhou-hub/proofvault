@@ -3,6 +3,7 @@ import { handleTaxonomyMatch } from './taxonomyMatch.js';
 import { handleRecordAnalyze } from './recordAnalyze.js';
 import { handleSeal, handleVerify, handleLedger } from './ledger.js';
 import { handleCheckSources } from './sourceCheck.js';
+import { handleReceipt } from './receipt.js';
 
 const ROUTES = {
   '/api/taxonomy-match': handleTaxonomyMatch,
@@ -11,6 +12,7 @@ const ROUTES = {
   '/api/verify': handleVerify,
   '/api/ledger': handleLedger,
   '/api/check-sources': handleCheckSources,
+  '/api/receipt': handleReceipt,
 };
 
 const MAX_BODY_BYTES = 1024 * 1024;

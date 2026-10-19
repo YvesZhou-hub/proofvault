@@ -260,9 +260,9 @@ function LockDialog({ note, onClose, onLock, onDone }) {
         {seal ? (
           <div className="p-7 text-center">
             <Vee mood="happy" size={110} bob className="mx-auto" />
-            <h2 className="mt-3 text-2xl font-bold">Record locked</h2>
+            <h2 className="mt-3 text-2xl font-bold">Review saved</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {note.patient.name} · {note.type} is now in the permanent record. Any change to it can be detected.
+              {note.patient.name} · {note.type} has been saved. Changed passages are collected in the Correction Library.
             </p>
             <dl className="mt-5 space-y-2 rounded-2xl bg-slate-100 p-4 text-left text-xs">
               <div className="flex justify-between gap-3">
@@ -283,7 +283,7 @@ function LockDialog({ note, onClose, onLock, onDone }) {
               </div>
             </dl>
             <button onClick={onDone} className="mt-5 w-full rounded-xl bg-slate-950 py-3 text-sm font-bold text-white">
-              Back to worklist
+              Open Correction Library
             </button>
           </div>
         ) : (
@@ -293,7 +293,7 @@ function LockDialog({ note, onClose, onLock, onDone }) {
                 <Lock className="h-5 w-5" />
               </span>
               <div>
-                <h2 className="text-xl font-bold">Sign and lock this note</h2>
+                <h2 className="text-xl font-bold">Confirm and save this review</h2>
                 <p className="text-sm text-slate-500">
                   {note.patient.name} · {note.type}
                 </p>
@@ -329,7 +329,7 @@ function LockDialog({ note, onClose, onLock, onDone }) {
                 onClick={submit}
                 className="flex-1 rounded-xl bg-brand-yellow py-3 text-sm font-bold text-slate-950 shadow-[0_3px_0_#d5b800] disabled:opacity-40 disabled:shadow-none"
               >
-                {busy ? 'Locking…' : 'Sign & lock'}
+                {busy ? 'Locking…' : 'Confirm & save'}
               </button>
             </div>
           </div>
@@ -339,7 +339,7 @@ function LockDialog({ note, onClose, onLock, onDone }) {
   );
 }
 
-export default function NoteReview({ note, onBack, onDecide, onUndo, onAsk, onApplyAnswer, onTrace, onLock }) {
+export default function NoteReview({ note, onBack, onDecide, onUndo, onAsk, onApplyAnswer, onTrace, onLock, onSaved }) {
   const issues = issuesOf(note);
   const [selected, setSelected] = useState(() => (openIssues(note)[0] || issues[0])?.id);
   const [lockOpen, setLockOpen] = useState(false);
@@ -429,7 +429,7 @@ export default function NoteReview({ note, onBack, onDecide, onUndo, onAsk, onAp
                   title={st === 'query' ? 'Waiting on a clinician reply' : open ? 'Sort every issue first' : ''}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-brand-yellow px-4 py-2.5 text-sm font-bold text-slate-950 shadow-[0_3px_0_#d5b800] disabled:opacity-40 disabled:shadow-none"
                 >
-                  <Lock className="h-4 w-4" /> Sign & lock
+                  <Lock className="h-4 w-4" /> Confirm & save
                 </button>
               )}
             </div>
@@ -574,7 +574,7 @@ export default function NoteReview({ note, onBack, onDecide, onUndo, onAsk, onAp
           )}
           {!note.seal && st === 'ready' && seg && (
             <VeeSays mood="happy" size={52} className="mt-5">
-              Every issue is sorted. Hit <b>Sign & lock</b> to file it into the medical record.
+              Every issue is sorted. Hit <b>Confirm & save</b> to preserve this review and collect its corrections.
             </VeeSays>
           )}
           {st === 'query' && (
@@ -585,7 +585,7 @@ export default function NoteReview({ note, onBack, onDecide, onUndo, onAsk, onAp
         </aside>
       </div>
 
-      {lockOpen && <LockDialog note={note} onClose={() => setLockOpen(false)} onLock={onLock} onDone={onBack} />}
+      {lockOpen && <LockDialog note={note} onClose={() => setLockOpen(false)} onLock={onLock} onDone={onSaved || onBack} />}
     </div>
   );
 }

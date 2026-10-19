@@ -6,6 +6,10 @@ import ProvenanceMapOverlay from '../components/ProvenanceMap.jsx';
 import Worklist from './Worklist.jsx';
 import NoteReview from './NoteReview.jsx';
 import Locked from './Locked.jsx';
+import Receive from './Receive.jsx';
+import { readLearning, saveLearning } from './Learning.jsx';
+import Workflow from './Workflow.jsx';
+import { finalText } from './model.js';
 import { ME, CLINICIANS } from './notes.js';
 import { initialNotes, statusOf, noteText } from './model.js';
 import { lockOriginalDraft } from '../lib.js';
@@ -45,7 +49,13 @@ function noteFromUpload({ fileName, paragraphs, analysis, model }) {
 
 export default function HealthApp() {
   const [notes, setNotes] = useState(initialNotes);
-  const [view, setView] = useState({ name: 'worklist' });
+  const [learning, setLearning] = useState(readLearning);
+  const updateLearning = (next) => { saveLearning(next); setLearning(next); };
+  // ?receive=<archiveId> opens the receiver's check directly (e.g. a link sent with a referral).
+  const [view, setView] = useState(() => {
+    const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('receive') : null;
+    return id ? { name: 'receive', id } : { name: 'learning' };
+  });
   const [tab, setTab] = useState('review');
   const [query, setQuery] = useState('');
   const [toasts, setToasts] = useState([]);
@@ -132,7 +142,9 @@ export default function HealthApp() {
     if (!res.ok) throw new Error(entry.error || 'Could not lock the record');
     const seal = { archiveId: entry.archiveId, hash: entry.contentHash, sealedAt: entry.sealedAt };
     update(id, (n) => ({ ...n, seal, audit: log(n, `Signed and locked as ${seal.archiveId}`) }));
-    toast('Record locked into the medical record');
+    const corrections = note.segments.filter(s => ['fixed','edited'].includes(note.decisions[s.id]) && finalText(note,s) !== s.text).map(s => ({ id: `${entry.archiveId}-${s.id}`, patient: note.patient.name + ' · fictional demo', original: s.text, corrected: finalText(note,s), evidence: [...(s.evidence?.transcript || []).map(x => x.text), ...(s.evidence?.records || []).map(x => x.label + ': ' + x.value)].join(' / ') || 'No linked source supplied; requires separate review', reviewer: ME.name + ' · demo reviewer', pattern: s.pattern, archiveId: entry.archiveId }));
+    updateLearning({...learning,cases:[...learning.cases,...corrections]});
+    toast('Review saved. Corrections added to the library.');
     return seal;
   };
 
@@ -154,10 +166,11 @@ export default function HealthApp() {
   const current = view.name === 'note' ? notes.find((n) => n.id === view.id) : null;
   const toReview = notes.filter((n) => ['review', 'ready'].includes(statusOf(n))).length;
   const NAV = [
+    { key: 'learning', label: 'Complete workflow', icon: ShieldCheck },
     { key: 'worklist', label: 'Worklist', icon: Inbox, badge: toReview },
-    { key: 'locked', label: 'Locked records', icon: ShieldCheck },
+    { key: 'locked', label: 'Evidence archive', icon: ShieldCheck },
   ];
-  const activeNav = view.name === 'locked' ? 'locked' : 'worklist';
+  const activeNav = view.name === 'learning' ? 'learning' : ['locked', 'receive'].includes(view.name) ? 'locked' : 'worklist';
 
   return (
     <div className="flex min-h-screen bg-slate-100 text-slate-900">
@@ -257,8 +270,10 @@ export default function HealthApp() {
         </header>
 
         <main className="flex-1">
+          {view.name === 'learning' && <Workflow note={notes.find(n => n.id === 'note-4092')} data={learning} onChange={updateLearning} onAsk={(sid,q)=>ask('note-4092',sid,q)} onApply={(sid)=>applyAnswer('note-4092',sid)} onLock={()=>lock('note-4092')} />}
           {view.name === 'worklist' && <Worklist notes={notes} tab={tab} setTab={setTab} query={query} onOpen={open} />}
-          {view.name === 'locked' && <Locked />}
+          {view.name === 'locked' && <Locked onReceive={(id) => { setView({ name: 'receive', id }); window.scrollTo?.(0, 0); }} />}
+          {view.name === 'receive' && <Receive key={view.id} archiveId={view.id} onBack={() => setView({ name: 'locked' })} />}
           {current && (
             <NoteReview
               key={current.id}
@@ -270,6 +285,7 @@ export default function HealthApp() {
               onApplyAnswer={(segId) => applyAnswer(current.id, segId)}
               onTrace={(seg) => setMap({ claim: seg.text, lens: 'healthcare', nonce: Date.now() })}
               onLock={() => lock(current.id)}
+              onSaved={() => setView({name:'learning'})}
             />
           )}
         </main>

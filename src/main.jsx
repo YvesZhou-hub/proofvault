@@ -7,7 +7,7 @@ import './index.css';
 // The hospital product is the default. The earlier multi-sector workspace and the teammate's
 // hand-off review flows stay reachable with ?classic or ?review=… .
 const params = new URLSearchParams(window.location.search);
-const Root = params.has('classic') || params.has('review') ? App : HealthApp;
+const Root = HealthApp;
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

@@ -1,0 +1,19 @@
+SLIDE 1
+Now we have corrected Ann's note. But what happens to the mistake we found? ProofVault saves the original wording, the confirmed correction and its evidence. In this fictional case, the AI draft says five hundred milligrams. The sample clinician confirms fifty. We preserve the correction so it can inform future checks.
+
+Cue: show the saved cases after Confirm & save. The case, transcript and clinician replies are simulated. This is not a verified patient incident or treatment guidance.
+
+SLIDE 2
+We reuse the checking method. A person reviews a proposed rule: compare each recorded dose with its own source. We do not assume fifty milligrams is right for every patient. The reviewer approves a limited scope before the check runs.
+
+Cue: approve dose-source-match/v1. The template is manually authored. No model training or automatic rule generation occurs. The narrow checker does not test bias.
+
+SLIDE 3
+Here is a different fictional record. The note says one hundred milligrams, but its source says ten. The approved rule flags the mismatch for human review. If I enter matching values, it reports no mismatch. If evidence is missing or units differ, it asks for further checking.
+
+Cue: run the editable dose comparison and try matching values. It compares structured fields, not whole documents. Same medicine, formulation, route and schedule are assumed in the demo. It does not recommend a dose.
+
+SLIDE 4
+This is the complete workflow: collect a correction, approve a check and test the next record. Our aim is to help reviewers reuse what they have already verified. The next step is to evaluate whether this reduces missed mismatches and review time in real workflows. Thank you.
+
+Open http://127.0.0.1:5175/ on the demo computer. Local server required. No measured improvement is claimed. Cases and rule approval use local browser storage. Reviewer identity is simulated. Signature storage supports evidence preservation rather than proving clinical accuracy.

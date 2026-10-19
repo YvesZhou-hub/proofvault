@@ -122,6 +122,10 @@ export async function verifyChain(tamper) {
   return { ok: brokenAt === null, brokenAt, length: chain.length, head: chain[chain.length - 1].entryHash, records };
 }
 
+export async function getEntry(archiveId) {
+  return (await getLedger()).find((e) => e.archiveId === archiveId) ?? null;
+}
+
 export async function listLedger() {
   return (await getLedger()).map(({ text, privateKey, ...e }) => ({ ...e, textPreview: text.slice(0, 160), textLength: text.length }));
 }

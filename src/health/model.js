@@ -30,8 +30,8 @@ export function statusOf(note) {
 export const STATUS = {
   review: { label: 'To review', cls: 'bg-amber-100 text-amber-800' },
   query: { label: 'Waiting on clinician', cls: 'bg-sky-100 text-sky-800' },
-  ready: { label: 'Ready to lock', cls: 'bg-cyan-100 text-cyan-800' },
-  locked: { label: 'Locked', cls: 'bg-slate-200 text-slate-700' },
+  ready: { label: 'Ready to save', cls: 'bg-cyan-100 text-cyan-800' },
+  locked: { label: 'Saved', cls: 'bg-slate-200 text-slate-700' },
 };
 
 export function finalText(note, seg) {

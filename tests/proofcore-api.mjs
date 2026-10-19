@@ -24,8 +24,14 @@ try {
   await post('seal',{docId:'t2',title:'Later',text:'Later record',reviewer:{id:'r1',name:'Dr. Amelia Chen'}});
   chain=await post('verify',{tamper:{archiveId:seal.archiveId,text:'Jello record'}});assert.equal(chain.brokenAt,2);assert.equal(chain.records[3].downstreamOfBreak,true);
   assert.equal((await post('verify',{})).ok,true);
+  const noteText='Currently taking metoprolol 50 mg twice daily for hypertension.';
+  const note=await post('seal',{docId:'note-4092',title:'Consultation note — Ann Lee',text:noteText,reviewer:{id:'r3',name:'Amy Fox',role:'Health Information Manager'},metadata:{originalText:'Currently taking metoprolol 500 mg twice daily for hypertension.',clinicianQueries:{s2:{question:'Confirm dose?',reply:'Confirmed — 50 mg twice daily.'}}}});
+  let rc=await post('receipt',{archiveId:note.archiveId});assert.equal(rc.status,'valid');assert.equal(rc.approvedText,noteText);assert.equal(rc.reviewer.name,'Amy Fox');assert(rc.trail.originalText.includes('500 mg'));
+  rc=await post('receipt',{archiveId:note.archiveId,text:noteText.replace('50 mg','500 mg')});assert.equal(rc.status,'changed');assert.equal(rc.checks.content,false);assert.equal(rc.checks.signature,false);
+  const missing=await fetch(`${base}/receipt`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({archiveId:'PV-NOPE'})});assert.equal(missing.status,404);assert.equal((await missing.json()).status,'unknown');
+  assert.equal((await post('verify',{})).ok,true);
   await post('ledger',{action:'reset'});
-  console.log('PASS: grounding, no-key rules fallback, Ed25519 seal, length 3, tamper + downstream, unchanged ledger');
+  console.log('PASS: grounding, no-key rules fallback, Ed25519 seal, length 3, tamper + downstream, receiver check (valid / changed / unknown), unchanged ledger');
 } finally {
   server?.close();
 }
