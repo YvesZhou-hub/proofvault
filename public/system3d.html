@@ -1,1 +1,221 @@
-<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/"><title>ProofVault — Learning from corrections</title><a href="/">Open Correction Library</a>
+<title>ProofVault 系统剖面</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@700;900&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* Layout: a 3D cutaway of the system as a four-storey building (frontend on top, API, check engine, seal engine at the base) with an inspector panel; three journey buttons send a document through the real call path. */
+:root{
+  --bg:#edf0f4; --surface:#ffffff; --ink:#111923; --muted:#566273; --line:#d2d9e1;
+  --front:#5b5bd6; --api:#c27c0e; --core:#0f8a72; --doc:#e0443a;
+  --f-display:"Noto Serif SC","Songti SC",serif; --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --scene:#e4e9ef;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0b1016;--surface:#141b24;--ink:#e3e9f0;--muted:#96a3b3;--line:#283240;--front:#9a9cff;--api:#f0b04a;--core:#4fd6b8;--doc:#ff7a6e;--scene:#101721;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0b1016;--surface:#141b24;--ink:#e3e9f0;--muted:#96a3b3;--line:#283240;--front:#9a9cff;--api:#f0b04a;--core:#4fd6b8;--doc:#ff7a6e;--scene:#101721;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14.5px;line-height:1.65}
+.wrap{max-width:1240px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(28px,4.6vw,46px);line-height:1.1;margin:6px 0 8px;text-wrap:balance}
+.lede{margin:0;max-width:48em;color:var(--muted);font-size:15.5px}
+.lede b{color:var(--ink);font-weight:500}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+button{font:inherit;font-size:13.5px;cursor:pointer;padding:7px 14px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+button:hover{border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--front);outline-offset:2px}
+button.j{font-weight:600}
+button.j[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.bar label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.bar input[type=range]{width:150px;accent-color:var(--ink)}
+.sep{flex:1}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media (max-width:960px){.main{grid-template-columns:minmax(0,1fr)}}
+.viewport{position:relative;background:var(--scene);border:1px solid var(--line);border-radius:18px;overflow:hidden;height:min(640px,72vh);min-height:420px;touch-action:none;cursor:grab}
+.viewport:active{cursor:grabbing}
+.viewport canvas{display:block;width:100%;height:100%}
+.hint{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px 8px;pointer-events:none}
+.legend{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:4px;font-size:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;pointer-events:none}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.nogl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h2{font-family:var(--f-display);font-size:21px;margin:0;line-height:1.3}
+.who{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px;border:1.5px solid;align-self:flex-start}
+.who.front{color:var(--front);border-color:var(--front)} .who.api{color:var(--api);border-color:var(--api)} .who.core{color:var(--core);border-color:var(--core)}
+.file{font-family:var(--f-mono);font-size:12px;color:var(--muted);word-break:break-all}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;font-size:13.5px;opacity:.45;transition:opacity .3s}
+.steps li::before{counter-increment:s;content:counter(s);font-family:var(--f-mono);font-size:11px;font-weight:600;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--muted);color:var(--muted)}
+.steps li.on{opacity:1}
+.steps li.on::before{background:var(--doc);border-color:var(--doc);color:#fff}
+.steps li.done{opacity:.85}
+.steps b{font-weight:600}
+.layers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.layers{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.layers{grid-template-columns:minmax(0,1fr)}}
+.lay{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;border-top:4px solid;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.lay.front{border-top-color:var(--front)} .lay.api{border-top-color:var(--api)} .lay.core{border-top-color:var(--core)}
+.lay h3{margin:0;font-size:14.5px}
+.lay ul{margin:0;padding-left:16px;color:var(--muted)}
+.small{font-size:12.5px;color:var(--muted)}
+</style>
+<aside style="padding:12px 20px;background:#fff3cd;color:#493700;font:14px/1.6 sans-serif">演示说明：机构和记录为模拟资料。三节点共识与默克尔树仅为浏览器内概念演示，不是已部署的多机构网络。实际 API 使用本地 Ed25519 哈希链；密钥由演示服务器管理，尚无审核人身份认证。依据匹配不是事实真伪证明。</aside>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">RIMPA Global Hackathon 2026 · 系统剖面</div>
+    <h1>一栋四层的楼：上面是界面，下面是引擎</h1>
+    <p class="lede"><b>紫色</b>是 ProofVault 前端，档案员每天看到的工作台；<b>琥珀色</b>是接口；<b>青绿色</b>是 ProofCore 引擎，负责安检和上锁，脱离界面也能单独运行。拖动旋转，滚轮缩放，点任意方块查看它做什么。</p>
+  </header>
+
+  <div class="bar" role="toolbar" aria-label="控制">
+    <span class="small">让一份文件走一遍：</span>
+    <button class="j" data-j="check" aria-pressed="false">① 安检</button>
+    <button class="j" data-j="seal" aria-pressed="false">② 上锁</button>
+    <button class="j" data-j="verify" aria-pressed="false">③ 验锁</button>
+    <button class="j" data-j="map" aria-pressed="false">溯源地图</button>
+    <span class="sep"></span>
+    <label for="explode">剖开 <input type="range" id="explode" min="0" max="100" value="55"></label>
+    <button id="spin" aria-pressed="true">自动旋转</button>
+  </div>
+
+  <div class="main">
+    <div class="viewport" id="vp" aria-label="系统 3D 模型，可拖动旋转">
+      <div class="legend" aria-hidden="true"><span><i style="background:var(--front)"></i>ProofVault 前端（队友）</span><span><i style="background:var(--api)"></i>接口层</span><span><i style="background:var(--core)"></i>ProofCore 引擎（我们）</span><span><i style="background:var(--doc)"></i>流动的文件</span></div>
+      <span class="hint">拖动旋转 · 滚轮缩放 · 点方块查看</span>
+    </div>
+    <aside class="panel" aria-live="polite" id="panel"></aside>
+  </div>
+
+  <section class="layers" id="layers" aria-label="各层清单"></section>
+  <p class="small">模块与文件路径对应 ProofVault 仓库合并 proofcore.patch 之后的结构。</p>
+</div>
+
+<script>
+const LAYERS=[
+ {key:'front',name:'第 4 层 · ProofVault 前端',sub:'档案员的工作台（队友）',mods:[
+  {id:'queue',name:'审核队列',file:'src/components/Queue.jsx',desc:'AI 生成的文件进来后排队，按风险排序，等待档案员审核。'},
+  {id:'viewer',name:'逐句标注与版本对比',file:'src/components/Viewer.jsx',desc:'在原文上标出问题句子，显示 AI 原稿和修改稿的逐词差异。'},
+  {id:'map',name:'溯源地图',file:'src/components/ProvenanceMap.jsx',desc:'把一条说法沿“领域 → 子领域 → 话题 → 已知模式”逐层匹配，看它属于哪种已知的虚假信息套路。'},
+  {id:'signoff',name:'合规清单与签核',file:'src/components/RightPanel.jsx',desc:'四项清单（真实性、偏见、元数据、长期价值）全部勾选、问题全部处理后，才能批准封存。'},
+  {id:'cert',name:'封存证书',file:'src/components/Modals.jsx',desc:'显示档案编号、内容指纹、审核人签名，可导出为封存凭证。'}]},
+ {key:'api',name:'第 3 层 · 接口',sub:'前端和引擎之间的门',mods:[
+  {id:'a-tax',name:'/api/taxonomy-match',file:'server/taxonomyMatch.js',desc:'把说法交给 Claude 在模式库里逐层匹配，再用代码校验路径必须真实存在于树中。（队友）'},
+  {id:'a-check',name:'/api/check-sources',file:'server/sourceCheck.js',desc:'接收文本，返回有依据、无依据、冲突的百分比和每条问题。（我们）'},
+  {id:'a-seal',name:'/api/seal',file:'server/ledger.js',desc:'接收批准后的最终文本和审核人，返回签名和档案编号。（我们）'},
+  {id:'a-verify',name:'/api/verify',file:'server/ledger.js',desc:'重新验证整条链，可以模拟“改一个字”看链条在哪里断开。（我们）'}]},
+ {key:'core',name:'第 2 层 · 安检引擎',sub:'ProofCore：入档前查真',mods:[
+  {id:'tax',name:'虚假信息模式库',file:'src/taxonomy.js',desc:'四层模式库，记录已知的错误信息、虚假信息和偏见套路及对应的管控措施。（队友）'},
+  {id:'reg',name:'档案登记册',file:'server/records.js',desc:'哪些记录存在、原文怎么写、是否被替代、机构何时成立、源系统里的事实。这是 AI 不知道、档案员知道的东西。'},
+  {id:'rules',name:'7 条核查规则',file:'server/sourceCheck.js',desc:'查无此源、引语被改、引用已替代文件、数字不符、结果无记录、统计无出处、机构年代不符。AI 找，规则判。'},
+  {id:'pct',name:'查真百分比',file:'server/sourceCheck.js',desc:'像查重一样按字数算出有依据、无依据、冲突的比例，并列出匹配来源。'}]},
+ {key:'core',name:'第 1 层 · 上锁引擎',sub:'ProofCore：入档后防篡改',mods:[
+  {id:'hash',name:'SHA-256 指纹',file:'server/ledger.js',desc:'内容改动一个字，指纹就完全不同。'},
+  {id:'sig',name:'Ed25519 签名',file:'server/ledger.js',desc:'每位审核人持有自己的密钥，签名无法冒充。'},
+  {id:'chain',name:'哈希链账本',file:'server/ledger.js',desc:'每个封印都包含上一个封印的哈希，改动旧记录会让后面整条链断开。'},
+  {id:'nodes',name:'三节点共识',file:'public/proofchain.html',desc:'演示页中的扩展：国家档案馆、机构、行业协会各存一份，以 2/3 多数为准。'}]}
+];
+const JOURNEYS={
+ check:{title:'① 安检：入档前查真',path:['doc','queue','a-check','reg','rules','pct','viewer'],steps:['AI 写好一份政策草稿','进入审核队列','前端调用 /api/check-sources','对照档案登记册','7 条规则逐句判定','当前仪表盘草稿实测：有依据 26%、无依据 74%','逐句标在原文上，档案员处理问题句']},
+ seal:{title:'② 上锁：批准后封存',path:['signoff','a-seal','hash','sig','chain','cert'],steps:['清单全部勾选，档案员批准','前端调用 /api/seal','计算最终文本的 SHA-256 指纹','用档案员的 Ed25519 密钥签名','接到哈希链账本末尾','生成封存证书']},
+ verify:{title:'③ 验锁：多年后核验',path:['cert','a-verify','chain','hash','sig','cert'],steps:['审计员拿着封存证书','调用 /api/verify','逐个重算账本中的记录','对比内容指纹','验证审核人签名','结果：完好，或指出断在哪一份']},
+ map:{title:'溯源地图：这条说法属于哪种套路',path:['map','a-tax','tax','map'],steps:['档案员选中一条可疑说法','调用 /api/taxonomy-match','Claude 在模式库中逐层匹配，代码校验路径','地图点亮匹配到的已知模式和管控措施']}
+};
+const WHO={front:['front','ProofVault 前端 · 队友'],api:['api','接口层'],core:['core','ProofCore 引擎 · 我们']};
+const OURS=new Set(['a-check','a-seal','a-verify','reg','rules','pct','hash','sig','chain','nodes']);
+const modInfo={};LAYERS.forEach((L,li)=>L.mods.forEach(m=>modInfo[m.id]={...m,layer:li,key:L.key}));
+const panel=document.getElementById('panel');
+function whoChip(m){const k=m.key==='api'?(OURS.has(m.id)?'core':'front'):m.key;const lab=m.key==='api'?(OURS.has(m.id)?'接口 · 我们写的':'接口 · 队友写的'):WHO[m.key][1];return `<span class="who ${k}">${lab}</span>`;}
+function showMod(id){const m=modInfo[id];if(!m)return;panel.innerHTML=`<span class="small">${LAYERS[m.layer].name}</span><h2>${m.name}</h2>${whoChip(m)}<p style="margin:0">${m.desc}</p><span class="file">${m.file}</span>`;}
+function showJourney(j,step){const J=JOURNEYS[j];panel.innerHTML=`<h2>${J.title}</h2><ol class="steps">${J.steps.map((s,i)=>`<li class="${i===step?'on':i<step?'done':''}">${s}</li>`).join('')}</ol>`;}
+function intro(){panel.innerHTML=`<h2>点一个方块，或让文件走一遍</h2><p style="margin:0" class="small">故事只有一句话：AI 写的东西变成档案之前先过安检，变成档案之后上锁。</p><ol class="steps"><li class="on"><b>安检</b>：第 2 层查真，结果显示在第 4 层</li><li class="on"><b>上锁</b>：第 4 层批准，第 1 层签名入链</li><li class="on"><b>验锁</b>：随时从证书回到第 1 层核验</li></ol>`;}
+document.getElementById('layers').innerHTML=LAYERS.map(L=>`<div class="lay ${L.key}"><h3>${L.name}</h3><span class="small">${L.sub}</span><ul>${L.mods.map(m=>`<li>${m.name}</li>`).join('')}</ul></div>`).join('');
+intro();
+
+/* ---------- 3D ---------- */
+const vp=document.getElementById('vp');
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let ok=!!window.THREE;let renderer;
+try{if(ok){renderer=new THREE.WebGLRenderer({antialias:true});}}catch(e){ok=false;}
+if(!ok){vp.insertAdjacentHTML('beforeend','<div class="nogl">这个浏览器无法显示 3D 模型。下面的分层清单展示了同样的结构。</div>');}
+else{
+ const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+ const scene=new THREE.Scene();
+ const camera=new THREE.PerspectiveCamera(38,1,0.1,200);
+ renderer.setPixelRatio(Math.min(2,devicePixelRatio));vp.prepend(renderer.domElement);
+ scene.add(new THREE.HemisphereLight(0xffffff,0x8090a0,.85));
+ const sun=new THREE.DirectionalLight(0xffffff,.7);sun.position.set(8,14,10);scene.add(sun);
+ const root=new THREE.Group();scene.add(root);
+ const SW=12,SD=7,ST=.35;
+ const layerGroups=[],mods={},labelSprites=[];
+ function label(text,{size=46,color='#111923',bg=null,bold=true,w=512}={}){
+  const c=document.createElement('canvas');c.width=w;c.height=128;const x=c.getContext('2d');
+  x.font=`${bold?'700':'500'} ${size}px "Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif`;
+  if(bg){x.fillStyle=bg;const tw=Math.min(w-8,x.measureText(text).width+40);x.beginPath();x.roundRect?x.roundRect((w-tw)/2,20,tw,88,18):x.rect((w-tw)/2,20,tw,88);x.fill();}
+  x.fillStyle=color;x.textAlign='center';x.textBaseline='middle';x.fillText(text,w/2,66,w-30);
+  const t=new THREE.CanvasTexture(c);t.anisotropy=4;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));s.scale.set(w/128*.62,.62,1);s.renderOrder=10;return s;}
+ function colorOf(key,id){return key==='api'?(OURS.has(id)?css('--core'):css('--front')):css('--'+key);}
+ // bottom (layer index 3) to top (index 0)
+ LAYERS.forEach((L,li)=>{
+  const g=new THREE.Group();const base=new THREE.Color(colorOf(L.key));
+  const slab=new THREE.Mesh(new THREE.BoxGeometry(SW,ST,SD),new THREE.MeshStandardMaterial({color:base.clone().lerp(new THREE.Color(0xffffff),.72),roughness:.8,transparent:true,opacity:.92}));
+  g.add(slab);const edges=new THREE.LineSegments(new THREE.EdgesGeometry(slab.geometry),new THREE.LineBasicMaterial({color:base}));g.add(edges);
+  const n=L.mods.length;const cols=n<=4?n:3;const rows=Math.ceil(n/cols);
+  L.mods.forEach((m,k)=>{const col=k%cols,row=Math.floor(k/cols);const bw=(SW-1.4)/cols-.5,bd=(SD-1.4)/rows-.6;
+   const geo=new THREE.BoxGeometry(bw,.75,bd);const mc=new THREE.Color(colorOf(L.key,m.id));
+   const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:mc,roughness:.55,metalness:.05,emissive:mc,emissiveIntensity:0}));
+   mesh.position.set(-SW/2+.7+(col+.5)*(SW-1.4)/cols,ST/2+.38,-SD/2+.7+(row+.5)*(SD-1.4)/rows);mesh.userData.id=m.id;g.add(mesh);
+   const lab=label(m.name,{size:44,color:'#ffffff',bg:'rgba(17,25,35,.82)'});lab.position.set(mesh.position.x,1.35,mesh.position.z);g.add(lab);labelSprites.push(lab);
+   mods[m.id]={mesh,group:g};});
+  const tl=label(L.name,{size:40,color:css('--ink'),bold:true,w:768});tl.position.set(-SW/2-2.6,.2,SD/2);g.add(tl);
+  layerGroups.push(g);root.add(g);});
+ // the floating AI draft
+ const doc=new THREE.Mesh(new THREE.BoxGeometry(1.1,.08,1.45),new THREE.MeshStandardMaterial({color:css('--doc'),emissive:css('--doc'),emissiveIntensity:.45}));
+ scene.add(doc);const docLabel=label('文件',{size:44,color:'#ffffff',bg:css('--doc')});scene.add(docLabel);
+ const draftPos=()=>new THREE.Vector3(SW/2+2.2,root.position.y+layerGroups[0].position.y+2.4,0);
+ mods.doc={mesh:{getWorldPosition:v=>v.copy(draftPos())}};
+ // trail line
+ const trailMat=new THREE.LineBasicMaterial({color:css('--doc'),transparent:true,opacity:.8});let trail=null;
+
+ let explode=.55;const setExplode=v=>{explode=v;layerGroups.forEach((g,i)=>{g.position.y=(LAYERS.length-1-i)*(1.25+explode*3.4);});root.position.y=-((LAYERS.length-1)*(1.25+explode*3.4))/2;};
+ setExplode(explode);
+ document.getElementById('explode').oninput=e=>setExplode(e.target.value/100);
+
+ // camera orbit
+ let theta=.75,phi=1.05,radius=34,spin=!reduce,drag=null;
+ const spinBtn=document.getElementById('spin');spinBtn.setAttribute('aria-pressed',spin);spinBtn.onclick=()=>{spin=!spin;spinBtn.setAttribute('aria-pressed',spin);};
+ function place(){camera.position.set(radius*Math.sin(phi)*Math.sin(theta),radius*Math.cos(phi),radius*Math.sin(phi)*Math.cos(theta));camera.lookAt(0,0,0);}
+ const cv=renderer.domElement;let moved=0;
+ cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};moved=0;cv.setPointerCapture(e.pointerId);});
+ cv.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;moved+=Math.abs(dx)+Math.abs(dy);theta-=dx*.008;phi=Math.max(.35,Math.min(1.45,phi-dy*.006));drag={x:e.clientX,y:e.clientY};spin=false;spinBtn.setAttribute('aria-pressed',false);});
+ cv.addEventListener('pointerup',e=>{const was=drag;drag=null;if(was&&moved<6)pick(e);});
+ cv.addEventListener('wheel',e=>{e.preventDefault();radius=Math.max(16,Math.min(60,radius+e.deltaY*.03));},{passive:false});
+ const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
+ function pick(e){const r=cv.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
+  const hit=ray.intersectObjects(Object.values(mods).map(m=>m.mesh).filter(m=>m.isMesh))[0];if(hit){stopJourney();highlight([hit.object.userData.id]);showMod(hit.object.userData.id);}}
+ function highlight(ids){Object.entries(mods).forEach(([id,m])=>{if(m.mesh.material)m.mesh.material.emissiveIntensity=ids.includes(id)?.55:0;});}
+
+ // journeys
+ let J=null;
+ function stopJourney(){J=null;document.querySelectorAll('.j').forEach(b=>b.setAttribute('aria-pressed',false));if(trail){scene.remove(trail);trail=null;}}
+ document.querySelectorAll('.j').forEach(b=>b.onclick=()=>{const key=b.dataset.j;stopJourney();b.setAttribute('aria-pressed',true);J={key,t0:performance.now(),step:-1};showJourney(key,0);});
+ const wp=id=>{const v=new THREE.Vector3();mods[id].mesh.getWorldPosition(v);v.y+=.9;return v;};
+ function runJourney(now){
+  if(!J){doc.position.copy(draftPos());docLabel.position.copy(draftPos()).add(new THREE.Vector3(0,.9,0));return;}
+  const path=JOURNEYS[J.key].path;const seg=reduce?0:1300;const pts=path.map(wp);
+  const t=reduce?path.length-1:(now-J.t0)/seg;const i=Math.min(path.length-1,Math.floor(t));const f=Math.min(1,t-i);
+  const a=pts[i],b=pts[Math.min(path.length-1,i+1)];const p=a.clone().lerp(b,f*f*(3-2*f));p.y+=Math.sin(f*Math.PI)*1.6;
+  doc.position.copy(p);docLabel.position.copy(p).add(new THREE.Vector3(0,.9,0));
+  if(i!==J.step){J.step=i;showJourney(J.key,i);highlight(path.slice(0,i+1));
+   if(trail)scene.remove(trail);trail=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.slice(0,i+1)),trailMat);scene.add(trail);}
+  if(t>path.length+1.2){J.t0=now;J.step=-1;}
+ }
+ function resize(){const w=vp.clientWidth,h=vp.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+ new ResizeObserver(resize).observe(vp);resize();
+ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{scene.background=new THREE.Color(css('--scene'));});
+ scene.background=new THREE.Color(css('--scene'));
+ function loop(now){if(spin)theta+=.0016;place();runJourney(now);renderer.render(scene,camera);requestAnimationFrame(loop);}
+ requestAnimationFrame(loop);
+}
+</script>

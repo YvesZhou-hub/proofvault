@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, ShieldAlert, RefreshCw, Loader2, FlaskConical, Send } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, RefreshCw, Loader2, FlaskConical } from 'lucide-react';
 import { VeeSays } from '../components/Vee.jsx';
 
 const post = async (url, body = {}) => {
@@ -10,7 +10,7 @@ const post = async (url, body = {}) => {
 };
 
 // The permanent record: every sealed entry in the signed ledger, with a one-click integrity check.
-export default function Locked({ onReceive }) {
+export default function Locked() {
   const [entries, setEntries] = useState(null);
   const [check, setCheck] = useState(null); // verify result
   const [busy, setBusy] = useState(false);
@@ -51,16 +51,16 @@ export default function Locked({ onReceive }) {
       <section className="pv-wash border-b border-slate-200">
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-8 sm:px-8 lg:grid-cols-[1.1fr_1fr] lg:py-10">
           <div>
-            <div className="pv-kicker text-slate-700">Supporting evidence · Northside Hospital</div>
+            <div className="pv-kicker text-slate-700">Permanent record · Northside Hospital</div>
             <h1 className="pv-display mt-5 text-[clamp(40px,5vw,68px)]">
-              Reviewed.
+              A decision.
               <br />
-              Preserved.
+              A record.
               <br />
-              <span className="pv-mark">Reusable.</span>
+              <span className="pv-mark">A trace.</span>
             </h1>
             <p className="mt-5 max-w-md text-[15px] leading-relaxed text-slate-600">
-              Signed records support the Correction Library. Preserve the original review evidence while proposed checks are separately reviewed and tested.
+              Every signed version is chained to the one before it. Change a single character and the check fails — here and for every record after it.
             </p>
             <button onClick={() => verify()} disabled={busy} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Check integrity
@@ -133,7 +133,7 @@ export default function Locked({ onReceive }) {
         {rows.map((e) => {
           const r = byId[e.archiveId];
           return (
-            <li key={e.archiveId} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 px-5 py-4 sm:gap-4">
+            <li key={e.archiveId} className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-5 py-4">
               <span className={`flex h-9 w-9 items-center justify-center rounded-full ${r ? (r.ok ? 'bg-cyan-100 text-cyan-800' : 'bg-red-100 text-red-700') : 'bg-slate-100 text-slate-500'}`}>
                 {r && !r.ok ? <ShieldAlert className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
               </span>
@@ -151,15 +151,6 @@ export default function Locked({ onReceive }) {
               >
                 <FlaskConical className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Simulate edit</span>
               </button>
-              {onReceive && (
-                <button
-                  onClick={() => onReceive(e.archiveId)}
-                  title="Open this record as the clinician who receives it, and verify the copy"
-                  className="inline-flex items-center gap-1 rounded-lg bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-white"
-                >
-                  <Send className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Send to receiver</span>
-                </button>
-              )}
             </li>
           );
         })}

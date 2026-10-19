@@ -1,1 +1,167 @@
-<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/"><title>ProofVault — Learning from corrections</title><a href="/">Open Correction Library</a>
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProofVault — Exploded System View</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@700;900&display=swap">
+<style>
+/* Layout: an exploded axonometric of the five system layers. Attacks enter from the left in red, our defences answer on the right in green; a detail panel below reads out the selected layer. */
+:root{
+  --bg:#eef1f5; --surface:#ffffff; --ink:#121a24; --muted:#566273; --line:#d3dae2;
+  --slab-top:#ffffff; --slab-l:#d9e0e8; --slab-r:#c5cfda; --slab-stroke:#8794a3;
+  --atk:#c23a2e; --atk-soft:#fde6e3; --def:#137a52; --def-soft:#dcf2e7; --sel:#3d4fd6;
+  --f-display:"Noto Serif SC","Songti SC",serif; --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1016; --surface:#141b24; --ink:#e3e9f0; --muted:#95a2b2; --line:#283240;
+  --slab-top:#1c2632; --slab-l:#141c26; --slab-r:#0f161e; --slab-stroke:#4b5a6b;
+  --atk:#ff7b6c; --atk-soft:#3a1915; --def:#5fd6a0; --def-soft:#10301f; --sel:#9aa6ff; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1016; --surface:#141b24; --ink:#e3e9f0; --muted:#95a2b2; --line:#283240;
+  --slab-top:#1c2632; --slab-l:#141c26; --slab-r:#0f161e; --slab-stroke:#4b5a6b;
+  --atk:#ff7b6c; --atk-soft:#3a1915; --def:#5fd6a0; --def-soft:#10301f; --sel:#9aa6ff; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14.5px;line-height:1.65}
+.wrap{max-width:1200px;margin:0 auto;padding-block:30px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(30px,5vw,48px);line-height:1.1;margin:6px 0 8px;text-wrap:balance}
+h1 .a{color:var(--atk)} h1 .d{color:var(--def)}
+.lede{margin:0;max-width:46em;color:var(--muted);font-size:15.5px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+button{font:inherit;font-size:13.5px;cursor:pointer;padding:7px 14px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+button:hover{border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink);font-weight:500}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;border-radius:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.bar label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.bar input[type=range]{width:160px;accent-color:var(--ink)}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:8px;overflow-x:auto}
+.stage svg{display:block;width:100%;min-width:0;height:auto}
+.slab{cursor:pointer}
+.slab .top{fill:var(--slab-top);stroke:var(--slab-stroke);stroke-width:1.2}
+.slab .l{fill:var(--slab-l);stroke:var(--slab-stroke);stroke-width:1.2}
+.slab .r{fill:var(--slab-r);stroke:var(--slab-stroke);stroke-width:1.2}
+.slab.sel .top{stroke:var(--sel);stroke-width:3}
+.slab:focus{outline:none}
+.slab:focus-visible .top{stroke:var(--sel);stroke-width:3}
+.slab .nm{font:700 15px var(--f-body);fill:var(--ink)}
+.slab .sub{font:10px var(--f-mono);fill:var(--muted)}
+.card rect{stroke-width:1.5}
+.card.atk rect{fill:var(--atk-soft);stroke:var(--atk)}
+.card.def rect{fill:var(--def-soft);stroke:var(--def)}
+.card .t{font:700 12.5px var(--f-body)}
+.card.atk .t{fill:var(--atk)} .card.def .t{fill:var(--def)}
+.card .li{font:12.5px var(--f-body);fill:var(--ink)}
+.wire{fill:none;stroke-width:1.8}
+.wire.atk{stroke:var(--atk);stroke-dasharray:6 4}
+.wire.def{stroke:var(--def)}
+.dim{opacity:.18}
+.cards{transition:opacity .4s}
+.head{font:700 13px var(--f-body);letter-spacing:.1em}
+.head.atk{fill:var(--atk)} .head.def{fill:var(--def)}
+.flowlab{font:10px var(--f-mono);fill:var(--muted)}
+.detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:820px){.detail{grid-template-columns:minmax(0,1fr)}}
+.dcol{border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;border:1px solid}
+.dcol.atk{background:var(--atk-soft);border-color:var(--atk)}
+.dcol.def{background:var(--def-soft);border-color:var(--def)}
+.dcol h3{margin:0;font-size:14px;letter-spacing:.06em}
+.dcol.atk h3{color:var(--atk)} .dcol.def h3{color:var(--def)}
+.item b{display:block;font-size:14.5px}
+.item span{font-size:13.5px;color:var(--muted)}
+.dtitle{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.dtitle h2{font-family:var(--f-display);font-size:24px;margin:0}
+.dtitle .k{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.limits{background:var(--surface);border:1px dashed var(--slab-stroke);border-radius:14px;padding:14px 16px;font-size:13.5px;color:var(--muted)}
+.limits b{color:var(--ink)}
+.limits ul{margin:6px 0 0;padding-left:18px}
+.small{font-size:12.5px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){.cards{transition:none}}
+</style>
+<div class="wrap">
+<header>
+<div class="eyebrow">RIMPA Global Hackathon 2026 · ProofVault / ProofCore</div>
+<h1>Five layers.<br><span class="a">Where trust breaks.</span> <span class="d">How we respond.</span></h1>
+<p class="lede">Follow an AI draft from its first claim to its signed record. Explore the risks on the left and the controls on the right. Select a layer to see what it does—and what it cannot promise.</p>
+</header>
+<div class="bar" role="toolbar" aria-label="View controls">
+<button class="primary" id="explode">Collapse layers</button>
+<label for="gap">Layer spacing <input type="range" id="gap" min="0" max="100" value="100"></label>
+<div class="seg" role="group" aria-label="Show risks or controls"><button data-v="all" aria-pressed="true">Both sides</button><button data-v="atk" aria-pressed="false">Risks</button><button data-v="def" aria-pressed="false">Controls</button></div>
+</div>
+<div class="stage"><svg id="svg" role="group" aria-label="Five interactive layers of ProofVault"></svg></div>
+<section aria-live="polite" style="display:flex;flex-direction:column;gap:12px">
+<div class="dtitle"><h2 id="dName"></h2><span class="k" id="dTech"></span></div>
+<div class="detail"><div class="dcol atk"><h3>WHAT CAN GO WRONG</h3><div id="dAtk" style="display:flex;flex-direction:column;gap:10px"></div></div><div class="dcol def"><h3>CONTROLS &amp; EVIDENCE</h3><div id="dDef" style="display:flex;flex-direction:column;gap:10px"></div></div></div>
+</section>
+<div class="limits"><b>Know the boundaries</b><ul>
+<li>A valid seal supports integrity checks after signing. It does not prove the original content is true.</li>
+<li>Grounding measures matches against a limited register. Missing evidence is not proof of falsehood; incorrect source records can also mislead the check.</li>
+<li>Bias requires contextual human judgement. The dashboard findings and suggested edits are pre-authored demonstration content.</li>
+<li>Image, audio and video deepfake detection is outside this prototype. C2PA metadata is illustrative, not validated.</li>
+<li>The API uses a local signed hash chain. Merkle trees and three-node consensus are browser-only concepts, not a deployed network. Server-managed demo keys do not authenticate reviewer identity.</li>
+</ul></div>
+<p class="small">Fictional organisations and sample records. Percentages describe register matching, not probabilities of truth. This diagram explains the workflow; it does not run a live check.</p>
+</div>
+
+<script>
+const L=[{"name": "AI draft", "tech": "Generated content", "atk": [["Invented citations", "A confident answer can name a report that is missing from the available records."], ["Unsupported statistics", "A draft states that 87% of households received support without citing evidence."], ["Deliberate misuse", "A person may use AI to produce misleading content at scale. Intent cannot be inferred from a source mismatch alone."]], "def": [["Capture the original", "Keep the original draft available for comparison with the reviewed version."], ["Check against records", "Submit its text to the source-check API before relying on it."], ["Human accountability", "A reviewer decides what can be used; the system does not certify truth."]]}, {"name": "Grounding engine", "tech": "Register + deterministic rules", "atk": [["Altered quotations", "A quotation may differ from the text recorded in the source register."], ["Inflated numbers", "The sample draft says 500 mg where the reference record says 50 mg. This is a synthetic test, not medical advice."], ["Outdated references", "A superseded policy may be presented as current."], ["Impossible timelines", "A citation can predate the establishment of its claimed issuing agency."]], "def": [["Source context", "Check registered facts, document status, replacement relationships and agency dates."], ["Rules decide matches", "An optional model extracts claims. Deterministic rules produce the source-check findings."], ["Demo evidence", "The policy fixture flags the unsupported 87% figure and a report missing from the sample register."]]}, {"name": "Human review", "tech": "Evidence + reviewer judgement", "atk": [["Unsupported claims pass", "Fluent writing can hide gaps in supporting evidence."], ["Biased framing", "Group-based assumptions or loaded language can shape a decision unfairly."]], "def": [["Grounding breakdown", "Show character-weighted grounded, ungrounded and conflicting text, with matching sources."], ["Review the evidence", "Inspect findings, correct or remove claims, and complete the sign-off checklist. Grounding results are advisory, not an automatic approval gate."], ["Demo evidence", "The current policy draft measures 26% grounded, 74% ungrounded and 0% conflict. Two of seven sentences match the register."]]}, {"name": "Digital seal", "tech": "SHA-256 + Ed25519", "atk": [["Content changes", "Even a one-character edit changes the signed content hash."], ["Identity impersonation", "A signature alone does not establish that the claimed human reviewer approved a record."]], "def": [["Hash the final text", "Seal the reviewed text through the API, retaining its content hash and signature."], ["Verify the signature", "Verify using the signing key. Demo keys are server-managed; production identity authentication remains out of scope."], ["Demo evidence", "The UI test detected a one-character edit. A subsequent verification remained intact because the simulation did not alter stored data."]]}, {"name": "Archive chain", "tech": "Linked seals + verification", "atk": [["Broken record links", "Changes to an earlier entry can affect verification of later records."], ["Compromised storage", "A local ledger is not a guarantee against a fully compromised server or lost keys."]], "def": [["Previous-hash link", "Each seal links to the previous entry so verification can locate a break and identify downstream records."], ["Non-destructive simulation", "Simulate tampering without changing the stored ledger, then verify the original again."], ["Concept extension", "The separate ProofChain page illustrates Merkle trees and majority agreement in one browser. No independent institutions or distributed nodes are connected."]]}];
+const svg=document.getElementById('svg');const NS='http://www.w3.org/2000/svg';
+let gap=1,view='all',sel=1,anim=null;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const W=1000,CX=500,SW=300,SD=150,T=24;
+const wrapText=(s,n)=>{const out=[];let cur='';for(const ch of s){cur+=ch;if(cur.length>=n&&/[，。、；：,.;\s]/.test(ch)){out.push(cur);cur='';}}if(cur)out.push(cur);return out.flatMap(x=>x.length>n+6?[x.slice(0,n+2),x.slice(n+2)]:[x]);};
+function cardLines(items){return items.flatMap(([h])=>['• '+h]);}
+function draw(){
+ const g=20+gap*175;const top=110;const H=top+(L.length-1)*g+SD+T+60;
+ svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+ let s='';
+ s+=`<text class="head atk" x="40" y="44">RISKS</text><text class="head def" x="${W-40}" y="44" text-anchor="end">CONTROLS</text>`;
+ s+=`<text class="flowlab" x="${CX}" y="38" text-anchor="middle">DRAFT → REVIEW → SIGNED RECORD</text>`;
+ const showCards=gap>0.55;const slabs=[];
+ L.forEach((ly,i)=>{
+  const cy=top+i*g+SD/2;
+  const pts=(a)=>a.map(p=>p.join(',')).join(' ');
+  const N=[CX,cy-SD/2],E=[CX+SW/2,cy],S=[CX,cy+SD/2],Wp=[CX-SW/2,cy];
+  // cards
+  if(showCards){
+   const op=Math.min(1,(gap-0.55)/0.35);
+   const mk=(side,items)=>{const lines=cardLines(items);const ch=lines.length*20+38;const cw=250;const x=side==='atk'?30:W-30-cw;const y=cy-ch/2;
+    const dim=view!=='all'&&view!==side?' dim':'';const anchor=side==='atk'?Wp:E;const cxp=side==='atk'?x+cw:x;
+    let c=`<g class="cards${dim}" style="opacity:${op}"><path class="wire ${side}" d="M${cxp},${cy} C${(cxp+anchor[0])/2},${cy} ${(cxp+anchor[0])/2},${anchor[1]} ${anchor[0]+(side==='atk'?-4:4)},${anchor[1]}" marker-end="url(#ar-${side})"/>`;
+    c+=`<g class="card ${side}"><rect x="${x}" y="${y}" width="${cw}" height="${ch}" rx="10"/><text class="t" x="${x+14}" y="${y+22}">${side==='atk'?'Risk':'Control'} · Layer ${i+1}</text>`;
+    lines.forEach((ln,k)=>c+=`<text class="li" x="${x+14}" y="${y+44+k*20}">${ln}</text>`);
+    return c+'</g></g>';};
+   s+=mk('atk',ly.atk)+mk('def',ly.def.filter(d=>d[0]!=='Demo evidence'));
+  }
+  // slab (collected, then drawn bottom layer first so upper layers sit on top)
+  slabs.push(`<g class="slab${sel===i?' sel':''}" data-i="${i}" tabindex="0" role="button" aria-label="Layer ${i+1}: ${ly.name}">
+   <polygon class="l" points="${pts([Wp,S,[S[0],S[1]+T],[Wp[0],Wp[1]+T]])}"/><polygon class="r" points="${pts([S,E,[E[0],E[1]+T],[S[0],S[1]+T]])}"/>
+   <polygon class="top" points="${pts([N,E,S,Wp])}"/>
+   <text class="nm" x="${CX}" y="${cy-2}" text-anchor="middle">${i+1} · ${ly.name}</text><text class="sub" x="${CX}" y="${cy+18}" text-anchor="middle">${ly.tech}</text></g>`);
+ });
+ s+=slabs.reverse().join('');
+ svg.innerHTML=`<defs><marker id="ar-atk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="var(--atk)"/></marker><marker id="ar-def" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10z" fill="var(--def)"/></marker></defs>`+s;
+}
+function render(){draw();
+ const ly=L[sel];document.getElementById('dName').textContent=`Layer ${sel+1} · ${ly.name}`;document.getElementById('dTech').textContent=ly.tech;
+ const it=a=>a.map(([h,t])=>`<div class="item"><b>${h}</b><span>${t}</span></div>`).join('');
+ document.getElementById('dAtk').innerHTML=it(ly.atk);document.getElementById('dDef').innerHTML=it(ly.def);}
+svg.addEventListener('click',e=>{const g=e.target.closest('[data-i]');if(g){sel=+g.dataset.i;render();}});
+svg.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const g=e.target.closest('[data-i]');if(g){e.preventDefault();sel=+g.dataset.i;render();svg.querySelector(`[data-i="${sel}"]`)?.focus();}}});
+const range=document.getElementById('gap');
+range.oninput=()=>{cancelAnimationFrame(anim);gap=range.value/100;draw();document.getElementById('explode').textContent=gap>0.5?'Collapse layers':'Expand layers';};
+document.getElementById('explode').onclick=()=>{
+ cancelAnimationFrame(anim);const target=gap>0.5?0:1;const from=gap;const t0=performance.now();const dur=reduce?1:1100;
+ const step=t=>{const k=Math.min(1,(t-t0)/dur);const e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;gap=from+(target-from)*e;range.value=Math.round(gap*100);draw();if(k<1)anim=requestAnimationFrame(step);else document.getElementById('explode').textContent=gap>0.5?'Collapse layers':'Expand layers';};
+ anim=requestAnimationFrame(step);};
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{view=b.dataset.v;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));draw();});
+document.getElementById('explode').textContent='Collapse layers';
+render();
+</script>
+
+</html>

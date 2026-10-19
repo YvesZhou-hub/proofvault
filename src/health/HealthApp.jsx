@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Inbox, ShieldCheck, Search, Bell, Plus, Info } from 'lucide-react';
+import { Inbox, ShieldCheck, Search, Bell, Plus, Info, Library } from 'lucide-react';
 import Vee from '../components/Vee.jsx';
 import { IngestModal } from '../components/Modals.jsx';
 import ProvenanceMapOverlay from '../components/ProvenanceMap.jsx';
@@ -54,7 +54,7 @@ export default function HealthApp() {
   // ?receive=<archiveId> opens the receiver's check directly (e.g. a link sent with a referral).
   const [view, setView] = useState(() => {
     const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('receive') : null;
-    return id ? { name: 'receive', id } : { name: 'learning' };
+    return id ? { name: 'receive', id } : { name: 'worklist' };
   });
   const [tab, setTab] = useState('review');
   const [query, setQuery] = useState('');
@@ -144,7 +144,7 @@ export default function HealthApp() {
     update(id, (n) => ({ ...n, seal, audit: log(n, `Signed and locked as ${seal.archiveId}`) }));
     const corrections = note.segments.filter(s => ['fixed','edited'].includes(note.decisions[s.id]) && finalText(note,s) !== s.text).map(s => ({ id: `${entry.archiveId}-${s.id}`, patient: note.patient.name + ' · fictional demo', original: s.text, corrected: finalText(note,s), evidence: [...(s.evidence?.transcript || []).map(x => x.text), ...(s.evidence?.records || []).map(x => x.label + ': ' + x.value)].join(' / ') || 'No linked source supplied; requires separate review', reviewer: ME.name + ' · demo reviewer', pattern: s.pattern, archiveId: entry.archiveId }));
     updateLearning({...learning,cases:[...learning.cases,...corrections]});
-    toast('Review saved. Corrections added to the library.');
+    toast('Record locked into the medical record');
     return seal;
   };
 
@@ -166,9 +166,9 @@ export default function HealthApp() {
   const current = view.name === 'note' ? notes.find((n) => n.id === view.id) : null;
   const toReview = notes.filter((n) => ['review', 'ready'].includes(statusOf(n))).length;
   const NAV = [
-    { key: 'learning', label: 'Complete workflow', icon: ShieldCheck },
     { key: 'worklist', label: 'Worklist', icon: Inbox, badge: toReview },
-    { key: 'locked', label: 'Evidence archive', icon: ShieldCheck },
+    { key: 'locked', label: 'Locked records', icon: ShieldCheck },
+    { key: 'learning', label: 'Correction Library', icon: Library },
   ];
   const activeNav = view.name === 'learning' ? 'learning' : ['locked', 'receive'].includes(view.name) ? 'locked' : 'worklist';
 
@@ -272,7 +272,7 @@ export default function HealthApp() {
         <main className="flex-1">
           {view.name === 'learning' && <Workflow note={notes.find(n => n.id === 'note-4092')} data={learning} onChange={updateLearning} onAsk={(sid,q)=>ask('note-4092',sid,q)} onApply={(sid)=>applyAnswer('note-4092',sid)} onLock={()=>lock('note-4092')} />}
           {view.name === 'worklist' && <Worklist notes={notes} tab={tab} setTab={setTab} query={query} onOpen={open} />}
-          {view.name === 'locked' && <Locked onReceive={(id) => { setView({ name: 'receive', id }); window.scrollTo?.(0, 0); }} />}
+          {view.name === 'locked' && <Locked />}
           {view.name === 'receive' && <Receive key={view.id} archiveId={view.id} onBack={() => setView({ name: 'locked' })} />}
           {current && (
             <NoteReview
@@ -285,7 +285,6 @@ export default function HealthApp() {
               onApplyAnswer={(segId) => applyAnswer(current.id, segId)}
               onTrace={(seg) => setMap({ claim: seg.text, lens: 'healthcare', nonce: Date.now() })}
               onLock={() => lock(current.id)}
-              onSaved={() => setView({name:'learning'})}
             />
           )}
         </main>

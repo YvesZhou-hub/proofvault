@@ -8,8 +8,8 @@ const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'E
 const TABS = [
   { key: 'review', label: 'To review' },
   { key: 'query', label: 'Waiting on clinician' },
-  { key: 'ready', label: 'Ready to save' },
-  { key: 'locked', label: 'Saved' },
+  { key: 'ready', label: 'Ready to lock' },
+  { key: 'locked', label: 'Locked' },
 ];
 
 const RISK_DOT = { Critical: 'bg-red-600', High: 'bg-orange-500', Medium: 'bg-amber-400', Low: 'bg-slate-400' };
@@ -45,7 +45,7 @@ export default function Worklist({ notes, tab, setTab, query, onOpen }) {
                   <br />
                   One record.
                   <br />
-                  <span className="pv-mark">Learn from corrections.</span>
+                  <span className="pv-mark">No guesswork.</span>
                 </>
               ) : (
                 <>
@@ -53,7 +53,7 @@ export default function Worklist({ notes, tab, setTab, query, onOpen }) {
                   <br />
                   Every record
                   <br />
-                  <span className="pv-mark">reviewed.</span>
+                  <span className="pv-mark">verified.</span>
                 </>
               )}
             </h1>
